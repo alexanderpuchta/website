@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql } from '@vercel/postgres';
 import {
@@ -53,11 +54,20 @@ export async function fetchEducation() {
 
 export async function fetchJobs() {
 
+  moment.locale('de');
   noStore();
 
   try {
 
-    const data = await sql<JobTable>`SELECT * FROM jobs`;
+    const data = await sql<JobTable>`
+      SELECT * FROM jobs
+      ORDER BY startDate DESC
+    `;
+
+    data.rows.forEach((job) => {
+      const date = moment().format(job.startDate)
+      console.log("***", date)
+    })
 
     const jobs = data.rows.map((job) => ({
       id: job.id,
