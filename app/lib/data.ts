@@ -1,13 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
-import { sql } from '@vercel/postgres';
-import {
-  Education,
-  EducationTable,
-  Job,
-  JobTable,
-  User,
-  UserTable
-} from './definitions';
+import { db } from './db';
 
 export async function fetchDashboardData() {
 
@@ -15,20 +7,12 @@ export async function fetchDashboardData() {
 
   try {
 
-    const educationCount = sql`SELECT COUNT(*) FROM education`;
-    const jobsCount = sql`SELECT COUNT(*) FROM jobs`;
-
-    const data = await Promise.all([
-      educationCount,
-      jobsCount
-    ])
-
-    const numbersOfEducation = Number(data[0].rows[0].count ?? '0')
-    const numbersOfJobs = Number(data[1].rows[0].count ?? '0')
+    const educationCount = db.education.count
+    const jobsCount = db.job.count
 
     return {
-      numbersOfEducation,
-      numbersOfJobs
+      educationCount,
+      jobsCount
     }
   } catch (error) {
 
@@ -36,18 +20,47 @@ export async function fetchDashboardData() {
     throw new Error("Failed to fetch dashbaord data.");
   }
 }
+
 export async function fetchEducation() {
 
   noStore();
 
   try {
 
-    const data = await sql<EducationTable>`SELECT * FROM education`;
-    return data.rows
+    const data = await db.education.findMany()
+    return data
   } catch (error) {
 
     console.log("Database Error", error);
     throw new Error("Failed to fetch education data.");
+  }
+}
+
+export async function fetchCurrentJob() {
+  const jobs = await fetchJobs()
+  
+  if (jobs.length === 0) {
+    return {
+      company: "",
+      title: "",
+      isEmployed: false
+    }
+  } else {
+    const current = jobs[0]
+
+    if (current.endDate === undefined) {
+      return {
+        company: current.name,
+        title: current.title,
+        isEmployed: true
+      }
+    } else {
+      return {
+        company: "",
+        title: "",
+        isEmployed: false
+      }
+    }
   }
 }
 
@@ -57,19 +70,23 @@ export async function fetchJobs() {
 
   try {
 
-    const data = await sql<JobTable>`SELECT * FROM jobs`;
+    const data = await db.job.findMany({
+      orderBy: {
+        start: 'desc'
+      }
+    })
 
-    const jobs = data.rows.map((job) => ({
+    const allJobs = data.map((job) => ({
       id: job.id,
       name: job.name,
       title: job.title,
       description: job.description,
       skills: job.skills.split(","),
       projects: job.projects.split(","),
-      startDate: job.startDate,
-      endDate: job.endDate
+      startDate: job.start,
+      endDate: job.end ?? undefined
     }))
-    return jobs
+    return allJobs
   } catch (error) {
 
     console.log("Database Error", error);
@@ -77,12 +94,15 @@ export async function fetchJobs() {
   }
 }
 
-export async function getUser(email: string) {
+export async function fetchLinks() {
+
+  noStore();
+
   try {
-    const user = await sql`SELECT * FROM users WHERE email=${email}`;
-    return user.rows[0] as User;
+    return await db.link.findMany()
   } catch (error) {
-    console.error('Failed to fetch user:', error);
-    throw new Error('Failed to fetch user.');
+
+    console.log("Database error", error)
+    throw new Error("Failed to fetch links data.")
   }
 }
