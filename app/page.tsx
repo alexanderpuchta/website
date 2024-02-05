@@ -49,10 +49,10 @@ export default async function Page() {
             {
               contact.map((item) => (
                 <Link
-                    href={item.href}
-                  >
+                  key={item.text}
+                  href={item.href}
+                >
                   <div className='flex flex-row gap-2 py-1'>
-                  
                     {
                     item.type === "instagram" ?
                       <InstagramIcon/> : (item.type === "linkedin" ? 

@@ -64,11 +64,6 @@ export async function fetchJobs() {
       ORDER BY startDate DESC
     `;
 
-    data.rows.forEach((job) => {
-      const date = moment().format(job.startDate)
-      console.log("***", date)
-    })
-
     const jobs = data.rows.map((job) => ({
       id: job.id,
       name: job.name,
